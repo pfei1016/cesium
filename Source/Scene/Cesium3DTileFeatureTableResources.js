@@ -1,11 +1,11 @@
 /*global define*/
 define([
-        '../Core/ComponentDataType',
+        '../Core/ComponentDatatype',
         '../Core/defaultValue',
         '../Core/defined',
         '../Core/DeveloperError'
     ], function(
-        ComponentDataType,
+        ComponentDatatype,
         defaultValue,
         defined,
         DeveloperError) {
@@ -36,7 +36,7 @@ define([
         var cachedArrayBufferViews = this._cachedArrayBufferViews;
         var arrayBuffer = cachedArrayBufferViews[semantic];
         if (!defined(arrayBuffer)) {
-            arrayBuffer = ComponentDataType.createArrayBufferView(componentType, this.buffer.buffer, this.buffer.byteOffset + byteOffset, count * featureSize);
+            arrayBuffer = ComponentDatatype.createArrayBufferView(componentType, this.buffer.buffer, this.buffer.byteOffset + byteOffset, count * featureSize);
             cachedArrayBufferViews[semantic] = arrayBuffer;
         }
         return arrayBuffer;
@@ -49,12 +49,8 @@ define([
             if (defined(byteOffset)) {
                 // This is a reference to the binary
                 count = defaultValue(count, 1);
-                var typedArray = this.getTypedArrayForSemantic(semantic, byteOffset, componentType, count);
-                var subArray = typedArray.subarray(0, count);
-                if (count === 1) {
-                    return subArray[0];
-                }
-                return subArray;
+                var typedArray = this.getTypedArrayForSemantic(semantic, byteOffset, componentType, count, 1);
+                return typedArray.subarray(0, count);
             }
         }
         return jsonValue;
@@ -68,14 +64,13 @@ define([
                 // This is a reference to the binary
                 featureSize = defaultValue(featureSize, 1);
                 var typedArray = this.getTypedArrayForSemantic(semantic, byteOffset, componentType, this.featuresLength, featureSize);
-                var subArray = typedArray.subarray(featureId * featureSize, featureId * featureSize + featureSize);
-                if (featureSize === 1) {
-                    return subArray[0];
-                }
-                return subArray;
+                return typedArray.subarray(featureId * featureSize, featureId * featureSize + featureSize);
             }
         }
-        return jsonValue.slice(featureId * featureSize, featureId * featureSize + featureSize);
+        if (Array.isArray(jsonValue)) {
+            return jsonValue.slice(featureId * featureSize, featureId * featureSize + featureSize);
+        }
+        return jsonValue;
     };
 
     return Cesium3DTileFeatureTableResources;

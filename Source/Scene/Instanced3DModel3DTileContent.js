@@ -4,6 +4,7 @@ define([
         '../Core/Cartesian2',
         '../Core/Cartesian3',
         '../Core/Color',
+        '../Core/ComponentDatatype',
         '../Core/defaultValue',
         '../Core/defined',
         '../Core/defineProperties',
@@ -23,7 +24,6 @@ define([
         '../Core/RequestType',
         '../Core/Transforms',
         '../Core/TranslationRotationScale',
-        '../Renderer/WebGLConstants',
         '../ThirdParty/Uri',
         '../ThirdParty/when',
         './Cesium3DTileFeature',
@@ -36,6 +36,7 @@ define([
         Cartesian2,
         Cartesian3,
         Color,
+        ComponentDatatype,
         defaultValue,
         defined,
         defineProperties,
@@ -55,7 +56,6 @@ define([
         RequestType,
         Transforms,
         TranslationRotationScale,
-        WebGLConstants,
         Uri,
         when,
         Cesium3DTileFeature,
@@ -203,6 +203,11 @@ define([
         byteOffset += sizeOfUint32;
 
         var featureTableJSONByteLength = view.getUint32(byteOffset, true);
+        //>>includeStart('debug', pragmas.debug);
+        if (featureTableJSONByteLength === 0) {
+            throw new DeveloperError('featureTableJSONByteLength is zero, the feature table must be defined.');
+        }
+        //>>includeEnd('debug');
         byteOffset += sizeOfUint32;
 
         var featureTableBinaryByteLength = view.getUint32(byteOffset, true);
@@ -239,7 +244,10 @@ define([
             byteOffset += featureTableBinaryByteLength;
 
             var featureTableResources = new Cesium3DTileFeatureTableResources(featureTableJSON, featureTableBinary);
-            var instancesLength = featureTableResources.getGlobalProperty('INSTANCES_LENGTH', WebGLConstants.UNSIGNED_INT);
+            var instancesLength = featureTableResources.getGlobalProperty('INSTANCES_LENGTH', ComponentDatatype.UNSIGNED_INT);
+            if (Array.isArray(instancesLength)) {
+                instancesLength = instancesLength[0];
+            }
             featureTableResources.featuresLength = instancesLength;
 
             //>>includeStart('debug', pragmas.debug);
@@ -297,22 +305,22 @@ define([
             var instanceTransform = new Matrix4();
             for (var i = 0; i < instancesLength; i++) {
                 // Get the instance position
-                var position = featureTableResources.getProperty('POSITION', i, WebGLConstants.FLOAT, 3);
+                var position = featureTableResources.getProperty('POSITION', i, ComponentDatatype.FLOAT, 3);
                 if (!defined(position)) {
                     position = instancePositionArray;
-                    var positionQuantized = featureTableResources.getProperty('POSITION_QUANTIZED', i, WebGLConstants.UNSIGNED_SHORT, 3);
+                    var positionQuantized = featureTableResources.getProperty('POSITION_QUANTIZED', i, ComponentDatatype.UNSIGNED_SHORT, 3);
                     //>>includeStart('debug', pragmas.debug);
                     if (!defined(positionQuantized)) {
                         throw new DeveloperError('Either POSITION or POSITION_QUANTIZED must be defined for each instance.');
                     }
                     //>>includeEnd('debug');
-                    var quantizedVolumeOffset = featureTableResources.getGlobalProperty('QUANTIZED_VOLUME_OFFSET', WebGLConstants.FLOAT, 3);
+                    var quantizedVolumeOffset = featureTableResources.getGlobalProperty('QUANTIZED_VOLUME_OFFSET', ComponentDatatype.FLOAT, 3);
                     //>>includeStart('debug', pragmas.debug);
                     if (!defined(quantizedVolumeOffset)) {
                         throw new DeveloperError('Global property: QUANTIZED_VOLUME_OFFSET must be defined for quantized positions.');
                     }
                     //>>includeEnd('debug');
-                    var quantizedVolumeScale = featureTableResources.getGlobalProperty('QUANTIZED_VOLUME_SCALE', WebGLConstants.FLOAT, 3);
+                    var quantizedVolumeScale = featureTableResources.getGlobalProperty('QUANTIZED_VOLUME_SCALE', ComponentDatatype.FLOAT, 3);
                     //>>includeStart('debug', pragmas.debug);
                     if (!defined(quantizedVolumeScale)) {
                         throw new DeveloperError('Global property: QUANTIZED_VOLUME_SCALE must be defined for quantized positions.');
@@ -326,8 +334,8 @@ define([
                 instanceTranslationRotationScale.translation = instancePosition;
 
                 // Get the instance rotation
-                var normalUp = featureTableResources.getProperty('NORMAL_UP', i, WebGLConstants.FLOAT, 3);
-                var normalRight = featureTableResources.getProperty('NORMAL_RIGHT', i, WebGLConstants.FLOAT, 3);
+                var normalUp = featureTableResources.getProperty('NORMAL_UP', i, ComponentDatatype.FLOAT, 3);
+                var normalRight = featureTableResources.getProperty('NORMAL_RIGHT', i, ComponentDatatype.FLOAT, 3);
                 var hasCustomOrientation = false;
                 if (defined(normalUp)) {
                     //>>includeStart('debug', pragmas.debug);
@@ -339,8 +347,8 @@ define([
                     Cartesian3.unpack(normalRight, 0, instanceNormalRight);
                     hasCustomOrientation = true;
                 } else {
-                    var octNormalUp = featureTableResources.getProperty('NORMAL_UP_OCT32P', i, WebGLConstants.UNSIGNED_SHORT, 2);
-                    var octNormalRight = featureTableResources.getProperty('NORMAL_RIGHT_OCT32P', i, WebGLConstants.UNSIGNED_SHORT, 2);
+                    var octNormalUp = featureTableResources.getProperty('NORMAL_UP_OCT32P', i, ComponentDatatype.UNSIGNED_SHORT, 2);
+                    var octNormalRight = featureTableResources.getProperty('NORMAL_RIGHT_OCT32P', i, ComponentDatatype.UNSIGNED_SHORT, 2);
                     if (defined(octNormalUp)) {
                         //>>includeStart('debug', pragmas.debug);
                         if (!defined(octNormalRight)) {
@@ -370,11 +378,11 @@ define([
                 instanceScale.x = 1.0;
                 instanceScale.y = 1.0;
                 instanceScale.z = 1.0;
-                var scale = featureTableResources.getProperty('SCALE', i, WebGLConstants.FLOAT);
+                var scale = featureTableResources.getProperty('SCALE', i, ComponentDatatype.FLOAT);
                 if (defined(scale)) {
-                    Cartesian3.multiplyByScalar(instanceScale, scale, instanceScale);
+                    Cartesian3.multiplyByScalar(instanceScale, scale[0], instanceScale);
                 }
-                var nonUniformScale = featureTableResources.getProperty('SCALE_NON_UNIFORM', i, WebGLConstants.FLOAT, 3);
+                var nonUniformScale = featureTableResources.getProperty('SCALE_NON_UNIFORM', i, ComponentDatatype.FLOAT, 3);
                 if (defined(nonUniformScale)) {
                     instanceScale.x *= nonUniformScale[0];
                     instanceScale.y *= nonUniformScale[1];
@@ -383,10 +391,10 @@ define([
                 instanceTranslationRotationScale.scale = instanceScale;
 
                 // Get the batchId
-                var batchId = featureTableResources.getProperty('BATCH_ID', i , WebGLConstants.UNSIGNED_SHORT);
+                var batchId = featureTableResources.getProperty('BATCH_ID', i , ComponentDatatype.UNSIGNED_SHORT);
                 if (!defined(batchId)) {
                     // If BATCH_ID semantic is undefined, batchId is just the instance number
-                    batchId = i;
+                    batchId = [i];
                 }
 
                 // Create the model matrix and the instance
@@ -394,7 +402,7 @@ define([
                 var modelMatrix = instanceTransform.clone();
                 instances[i] = {
                     modelMatrix : modelMatrix,
-                    batchId : batchId
+                    batchId : batchId[0]
                 };
             }
 
